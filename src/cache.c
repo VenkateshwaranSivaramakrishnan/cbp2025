@@ -225,7 +225,7 @@ public:
  */
 int main() {
     if (config::DEBUG >= 1) {
-        print_config();
+        printConfig();
     }
     SetAssociativeCache cache(config::CACHE_N_SET, config::CACHE_N_ASSOC);  // Create the cache
 
