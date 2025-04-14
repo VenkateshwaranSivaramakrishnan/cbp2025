@@ -109,6 +109,7 @@ int main(){
     PatternHistoryTable* T[] = { &T1, &T2, &T3 };
     uint32_t index[] = { index1, index2, index3 };
     tryAllocate(selectedT, tag, prediction, T, index);
+    PHR.update(PC, target);
 
     // Reset counter every n-branch lookup
     T1.resetUCtr();

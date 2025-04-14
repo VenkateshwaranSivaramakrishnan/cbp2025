@@ -55,7 +55,6 @@ protected:
     std::vector<CacheSet> sets;   // List of cache sets
     unsigned int numSets;     // Total number of sets in the cache
     unsigned int associativity;  // Number of cache lines per set
-    unsigned int branchCount; // Counter that keeps track of branches
 
 public:
     /**
@@ -64,7 +63,7 @@ public:
      * @param associativity The number of cache lines per set.
      */
     SetAssociativeCache(unsigned int numSets, unsigned int associativity) 
-        : numSets(numSets), associativity(associativity), branchCount(0) {
+        : numSets(numSets), associativity(associativity) {
         sets.resize(numSets, CacheSet(associativity));  // Initialize each set with the specified number of lines
     }
 
@@ -95,7 +94,6 @@ public:
 
         // Check the cache set for a hit or miss
         int lineIndex = sets[index].findCacheLine(tag);
-        branchCount++;
 
         if (lineIndex != -1) {  // Cache hit
             //std::cout << "Cache Hit at Set " << index << ", Line " << lineIndex << std::endl;          
@@ -114,7 +112,7 @@ public:
      */
      int accessCtrOnHit(unsigned int index, unsigned int tag) {
         for (int i = 0; i < sets[index].lines.size(); i++) {
-            if (sets[index].lines[i].tag == tag) {
+            if (sets[index].lines[i].valid && sets[index].lines[i].tag == tag) {
                 return sets[index].lines[i].ctr;  // Cache hit: return the index of the cache line
             }
         }
@@ -132,7 +130,7 @@ public:
      */
     int accessUOnHit(unsigned int index, unsigned int tag) {
         for (int i = 0; i < sets[index].lines.size(); i++) {
-            if (sets[index].lines[i].tag == tag) {
+            if (sets[index].lines[i].valid && sets[index].lines[i].tag == tag) {
                 return sets[index].lines[i].u;  // Cache hit: return the index of the cache line
             }
         }

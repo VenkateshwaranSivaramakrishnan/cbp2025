@@ -54,7 +54,7 @@ public:
      */
     std::bitset<9> foldPHR_3(uint32_t PC,
                            int i_min = 1, int i_max = 11,
-                           int j_min = 1, int j_max = 11) {
+                           int j_min = 1, int j_max = 11) const {
         std::bitset<8> folded;
 
         for (int i = i_min; i <= i_max; ++i) {
@@ -109,7 +109,7 @@ public:
      */
     std::bitset<9> foldPHR_2(uint32_t PC,
                            int i_min = 3, int i_max = 1,
-                           int j_min = 3, int j_max = 1) {
+                           int j_min = 3, int j_max = 1) const {
         std::bitset<8> folded;
 
         for (int i = i_min; i <= i_max; ++i) {
@@ -158,7 +158,7 @@ public:
      * @param PC The Program Counter.
      * @return A 9-bit std::bitset representing the folded index.
      */
-    std::bitset<9> foldPHR_1(uint32_t PC) {
+    std::bitset<9> foldPHR_1(uint32_t PC) const {
         std::bitset<8> folded;
 
         for (int k = 0; k < 8; ++k) {
@@ -235,13 +235,15 @@ public:
      * @param branch The branch address (source PC).
      * @param target The target address (destination PC).
      */
-    void updatePHR(uint32_t branch, uint32_t target) {
-       // Step 1: Shift left by 2 bits
-       PHR <<= 2;   
-        // Step 2: Compute footprint and XOR into PHR[15:0]
-        uint16_t fp = footprint(branch, target);
-        for (size_t i = 0; i < 16 && i < PHR.size(); ++i) { 
-           PHR[i] = PHR[i] ^ ((fp >> i) & 0x1);
+    void updatePHR(uint32_t branch, uint32_t target, bool resolveDir) {
+        if (resolveDir) {
+            // Step 1: Shift left by 2 bits
+            PHR <<= 2;   
+            // Step 2: Compute footprint and XOR into PHR[15:0]
+            uint16_t fp = footprint(branch, target);
+            for (size_t i = 0; i < 16 && i < PHR.size(); ++i) { 
+                PHR[i] = PHR[i] ^ ((fp >> i) & 0x1);
+            }
         }
     }
 

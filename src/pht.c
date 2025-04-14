@@ -100,7 +100,7 @@ public:
      *
      * @param branchCount The current total number of branch lookups or updates performed.
      */
-    void resetUCtr() {
+    void resetUCtr(uint64_t branchCount) {
         if (branchCount % config::CACHE_N_U_RST_CNT != 0) {
             return;  // Not yet time to reset
         }
