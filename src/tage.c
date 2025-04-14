@@ -6,7 +6,6 @@ int main(){
     int32_t target = 0xA; // TODO
 
     bool branchOutcome = false; // TODO: Replace
-    uint32_t branchCount = 0; // TODO: place under while loop
     
     PatternHistoryRegister PHR(config::PHR_WIDTH);
     BimodalPredictor T0(config::BM_INDEX_WIDTH, config::BM_CTR_WIDTH);
@@ -112,10 +111,9 @@ int main(){
     tryAllocate(selectedT, tag, prediction, T, index);
 
     // Reset counter every n-branch lookup
-    branchCount++;
-    T1.resetUCtr(branchCount);
-    T2.resetUCtr(branchCount);
-    T3.resetUCtr(branchCount);
+    T1.resetUCtr();
+    T2.resetUCtr();
+    T3.resetUCtr();
     
     printConfig();
     printBudget();

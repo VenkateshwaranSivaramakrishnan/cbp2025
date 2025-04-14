@@ -1,3 +1,11 @@
+#include <iostream>
+#include <vector>
+#include <cmath>
+#include <bitset>
+#include <cassert>
+#include "config.hpp"
+
+
 /**
  * @class BimodalPredictor
  * 
@@ -28,6 +36,8 @@ public:
     /**
      * Constructor to initialize the Bimodal predictor.
      * 
+     * @param indexBits: Number of bits used for indexing the prediction table
+     * @param counterBits: Number of bits used for each saturation counter
      */
     BimodalPredictor(unsigned int indexBits, unsigned int counterBits) {
         this->indexBits = indexBits;
@@ -144,3 +154,41 @@ public:
         std::cout << std::string(totalWidth, '=') << "\n";
     }
 };
+
+/**
+ * Main function for testing the Bimodal Predictor.
+ * 
+ * This simulates a sequence of branches, predicts outcomes, and updates the predictor with actual outcomes.
+ */
+int main() {
+    // Example:
+    // Initialize the predictor with BM_INDEX_WIDTH = 4 bits for the index (16 entries in the prediction table) and BM_CTR_WIDTH = 3 bits for the counter
+    // A 3-bit counter gives us 8 possible states (0 to 7)
+    BimodalPredictor predictor(config::BM_INDEX_WIDTH, config::BM_CTR_WIDTH); // 4 bits for indexing, 3-bit counter for each entry
+
+    // Simulated Program Counter values (addresses)
+    std::vector<unsigned int> PCValues = { 0x1, 0x2, 0x3, 0x1, 0x2, 0x4, 0x1, 0x3, 0x5 };
+
+    // Simulated actual outcomes (true = taken, false = not taken)
+    std::vector<bool> actualOutcomes = { true, false, true, false, true, false, true, false, true };
+
+    // Simulate the prediction and updating
+    for (size_t i = 0; i < PCValues.size(); ++i) {
+        unsigned int PC = PCValues[i];
+        bool actualOutcome = actualOutcomes[i];
+        
+        // Make a prediction
+        bool prediction = predictor.predict(PC);
+        std::cout << "PC: " << std::hex << PC << " | Predicted: " << prediction 
+                  << " | Actual: " << actualOutcome << std::endl;
+
+        // Update the predictor with the actual outcome
+        predictor.update(PC, actualOutcome);
+    }
+
+    // Display the final state of the prediction table
+    std::cout << "\nBimodal State:" << std::endl;
+    predictor.printBimodal(config::PRINT_FORMAT_BINARY);
+
+    return 0;
+}

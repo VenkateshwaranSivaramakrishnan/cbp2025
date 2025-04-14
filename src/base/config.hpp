@@ -1,37 +1,28 @@
 // config.hpp
 
+
 #ifndef CONFIG_HPP
 #define CONFIG_HPP
 
-#include <iostream>
-#include <vector>
-#include <cmath>
-#include <bitset>
-#include <cassert>
-#include <cstdint>
 #include <cstddef>
 #include <iomanip>
 #include <string>
-#include <list>
-#include <random>
-#include <boost/dynamic_bitset.hpp>
 
 namespace config {
     // === Debug Parameters ===
-    constexpr std::size_t DEBUG = 1; // 0: no prints, 1: verbose debug prints  
+    constexpr std::size_t DEBUG = 2; // 0: no prints, 1: verbose debug prints  
     constexpr std::size_t PRINT_FORMAT_BINARY = 0;  // 1 = binary, 0 = decimal
 
     // === Base Parameters ===
     // Bimodal
-    constexpr std::size_t BM_INDEX_WIDTH = 9; // Number of Index bits
+    constexpr std::size_t BM_INDEX_WIDTH = 4; // Number of Index bits
     constexpr std::size_t BM_CTR_WIDTH = 3; // n-bit counter
     // Cache
     constexpr std::size_t CACHE_N_INDEX_WIDTH = 9; // Index field width of N-th Cache/Table
     constexpr std::size_t CACHE_N_ASSOC = 4; // Associativity of N-th Cache/Table
-    constexpr std::size_t CACHE_N_TAG_WIDTH = 11; // Tag field width in N-th Cache/Table
+    constexpr std::size_t CACHE_N_TAG_WIDTH = 8; // Tag field width in N-th Cache/Table
     constexpr std::size_t CACHE_N_CTR_WIDTH = 3; // Counter field width in N-th Cache/Table
-    constexpr std::size_t CACHE_N_U_WIDTH = 2; // Usefulness field width in N-th Cache/Table
-    constexpr std::size_t CACHE_N_U_RST_CNT = 25000; // Branch count to reset the usefulness counters
+    constexpr std::size_t CACHE_N_U_WIDTH = 1; // Usefulness field width in N-th Cache/Table
     constexpr std::size_t CACHE_N_VALID_WIDTH = 1; // Valid field width in N-th Cache/Table
     // Pattern History
     constexpr std::size_t PHR_WIDTH = 388; // Number of branch history bits stored by the PHR 
@@ -39,6 +30,8 @@ namespace config {
     constexpr std::size_t EXPECTED_HW_BUDGET_BITS = 192*1024*8; // Hardware budget in bits
 
     // === Derived Parameters ===
+    constexpr std::size_t CACHE_N_LRU_BITS = (CACHE_N_ASSOC > 1) ? log2(CACHE_N_ASSOC) : 1; // Number of LRU bits
+    constexpr std::size_t CACHE_N_LRU_MAX = (1 << CACHE_N_LRU_BITS) - 1; // Maximum LRU count 
     constexpr std::size_t CACHE_N_SET = 1 << CACHE_N_INDEX_WIDTH; // Number of Sets in N-th Cache/Table
 
     // === Derived Functions ===
@@ -77,11 +70,12 @@ void printConfig() {
     print_entry("PHR_WIDTH", config::PHR_WIDTH);
     print_entry("CACHE_N_CTR_WIDTH", config::CACHE_N_CTR_WIDTH);
     print_entry("CACHE_N_U_WIDTH", config::CACHE_N_U_WIDTH);
-    print_entry("CACHE_N_U_RST_CNT", config::CACHE_N_U_RST_CNT);
     print_entry("CACHE_N_VALID_WIDTH", config::CACHE_N_VALID_WIDTH);
-    
+
     // Derived Parameters
     std::cout << "\n-- Derived Parameters --\n";
+    print_entry("CACHE_N_LRU_BITS", config::CACHE_N_LRU_BITS);
+    print_entry("CACHE_N_LRU_MAX", config::CACHE_N_LRU_MAX);
     print_entry("CACHE_N_SET", config::CACHE_N_SET);
     
     std::cout << "=================================================================\n";
@@ -101,15 +95,15 @@ void printConfig() {
     using namespace config;
 
     unsigned int bimodalBits = config::BM_CTR_WIDTH * (1 << config::BM_INDEX_WIDTH);
-    unsigned int pht_N_bits = config::CACHE_N_ASSOC * (1 << config::CACHE_N_INDEX_WIDTH) 
-                            * (config::CACHE_N_CTR_WIDTH + config::CACHE_N_TAG_WIDTH + config::CACHE_N_U_WIDTH + config::CACHE_N_VALID_WIDTH);
+    unsigned int bht_N_bits = config::CACHE_N_ASSOC * (1 << config::CACHE_N_INDEX_WIDTH) 
+                            * (config::CACHE_N_CTR_WIDTH + config::CACHE_N_TAG_WIDTH + config::CACHE_N_U_WIDTH + config::CACHE_N_VALID_WIDTH + config::CACHE_N_LRU_BITS);
     unsigned int phrBits = config::PHR_WIDTH;
-    unsigned int totalBits = bimodalBits + pht_N_bits + pht_N_bits + pht_N_bits + phrBits;
+    unsigned int totalBits = bimodalBits + bht_N_bits + bht_N_bits;
 
     // Column widths
     constexpr int w1 = 35;
-    constexpr int w2 = 36;
-    constexpr int w3 = 46;
+    constexpr int w2 = 35;
+    constexpr int w3 = 45;
 
     auto printRow = [&](const std::string& a, const std::string& b, const std::string& c) {
         std::cout << colSep << std::setw(w1) << std::left << std::string(pad, ' ') + a + std::string(pad, ' ')
@@ -144,28 +138,13 @@ void printConfig() {
     printDivider();
     printRow("Bimodal Predictor", std::to_string(config::BM_CTR_WIDTH) + " * 2^" + std::to_string(config::BM_INDEX_WIDTH) + 
              " = " + std::to_string(bimodalBits), "BM_CTR_WIDTH * 2^BM_INDEX_WIDTH");
-    printDivider();
-    printRow("Pattern History Table - 1", std::to_string(config::CACHE_N_ASSOC) + " x 2^" + std::to_string(config::CACHE_N_INDEX_WIDTH) + 
+    printRow("Branch History Table - 1", std::to_string(config::CACHE_N_ASSOC) + " x 2^" + std::to_string(config::CACHE_N_INDEX_WIDTH) + 
              " x (" + std::to_string(config::CACHE_N_CTR_WIDTH) + " + " + std::to_string(config::CACHE_N_TAG_WIDTH) + " + " + std::to_string(config::CACHE_N_U_WIDTH) +
-             " + " + std::to_string(config::CACHE_N_VALID_WIDTH) +
-             ") = " + std::to_string(pht_N_bits), "CACHE_N_ASSOC + 2^CACHE_N_INDEX_WIDTH");
-    printRow("", "", " * (CACHE_N_CTR_WIDTH + CACHE_N_TAG_WIDTH");
-    printRow("", "", "    + CACHE_N_U_WIDTH + CACHE_N_VALID_WIDTH)");
-    printDivider();
-    printRow("Pattern History Table - 2", std::to_string(config::CACHE_N_ASSOC) + " x 2^" + std::to_string(config::CACHE_N_INDEX_WIDTH) + 
-             " x (" + std::to_string(config::CACHE_N_CTR_WIDTH) + " + " + std::to_string(config::CACHE_N_TAG_WIDTH) + " + " + std::to_string(config::CACHE_N_U_WIDTH) +
-             " + " + std::to_string(config::CACHE_N_VALID_WIDTH) +
-             ") = " + std::to_string(pht_N_bits), "CACHE_N_ASSOC + 2^CACHE_N_INDEX_WIDTH");
-    printRow("", "", " * (CACHE_N_CTR_WIDTH + CACHE_N_TAG_WIDTH");
-    printRow("", "", "    + CACHE_N_U_WIDTH + CACHE_N_VALID_WIDTH)");
-    printDivider();
-    printRow("Pattern History Table - 3", std::to_string(config::CACHE_N_ASSOC) + " x 2^" + std::to_string(config::CACHE_N_INDEX_WIDTH) + 
-             " x (" + std::to_string(config::CACHE_N_CTR_WIDTH) + " + " + std::to_string(config::CACHE_N_TAG_WIDTH) + " + " + std::to_string(config::CACHE_N_U_WIDTH) +
-             " + " + std::to_string(config::CACHE_N_VALID_WIDTH) +
-             ") = " + std::to_string(pht_N_bits), "CACHE_N_ASSOC + 2^CACHE_N_INDEX_WIDTH");
-    printRow("", "", " * (CACHE_N_CTR_WIDTH + CACHE_N_TAG_WIDTH");
-    printRow("", "", "    + CACHE_N_U_WIDTH + CACHE_N_VALID_WIDTH)");
-    printDivider();
+             " + " + std::to_string(config::CACHE_N_VALID_WIDTH) + " + " + std::to_string(config::CACHE_N_LRU_BITS) +
+             ") = " + std::to_string(1), "CACHE_N_ASSOC + 2^CACHE_N_INDEX_WIDTH");
+    printRow("", "", " + (CACHE_N_CTR_WIDTH + CACHE_N_TAG_WIDTH");
+    printRow("", "", " +  CACHE_N_U_WIDTH + CACHE_N_VALID_WIDTH");
+    printRow("", "", " +  CACHE_N_LRU_BITS)");
     printRow("Pattern History Register", std::to_string(config::PHR_WIDTH), "PHR_WIDTH");
     printDivider();
 
@@ -178,10 +157,5 @@ void printConfig() {
     printDivider();
 }
 
-#include "bimodal.c"
-#include "cache.c"
-#include "phr.c"
-#include "pht.c"
-#include "helper.c"
 
 #endif // CONFIG_HPP
