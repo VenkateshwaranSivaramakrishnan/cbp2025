@@ -1,0 +1,13 @@
+Patch Notes:
+
+1.
+Mask LSB 2-bits of PC for Bimodal Index: 4 byte aligned PCs
+Fixed tryAllocate calls: contingent to mispredictions
+Increase Bimodal capacity (Index-bits: 9 -> 15)
+Increase PHT capacity (Index-bits: 9->12)
+Correct max, min for foldPHR_2
+New PHT indices: Increase I and j values for alderLake PHR in updatePHR function
+Added optional parameterized simple N-bit fold function
+Implemented LRU and updating policy
+
+

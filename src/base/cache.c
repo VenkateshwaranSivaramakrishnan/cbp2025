@@ -36,7 +36,7 @@ class CacheSet {
 private:
     void updateCacheLinesLRU(unsigned int tag) {
         int hitLRU = -1;
-        int invalid  = -1;
+        int invalid  = 0;
         for (int i = 0; i < lines.size(); i++) {
             if (lines[i].valid && lines[i].tag == tag) {  // If an invalid cache line is found, replace it
                 hitLRU = lines[i].lru;

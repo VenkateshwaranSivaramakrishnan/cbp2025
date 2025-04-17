@@ -11,9 +11,10 @@ struct CacheLine {
     unsigned int tag;   // Tag: Part of the memory address used to identify the block
     unsigned int ctr;  // Data: The actual data stored in the cache line
     unsigned int u;     // u: Usefulness counter
+    unsigned int lru;   // LRU: Bits indicating when was the line last used (0 being most recent)
 
     // Constructor to initialize CacheLine with default values
-    CacheLine() : valid(false), tag(0), ctr(0), u(0) {}
+    CacheLine() : valid(false), tag(0), ctr(0), u(0), lru(0) {}
 };
 
 /**
@@ -139,6 +140,33 @@ public:
         assert(false);  // Triggers program termination
         return -1;      // Optional: suppress compiler warning
     }
+
+    void updateCacheLinesLRU(unsigned int index, unsigned int tag) {
+        int hitLRU = -1;
+        int invalid  = 0;
+        for (int i = 0; i < sets[index].lines.size(); i++) {
+            if (sets[index].lines[i].valid && sets[index].lines[i].tag == tag) {  // If an invalid cache line is found, replace it
+                hitLRU = sets[index].lines[i].lru;
+                sets[index].lines[i].lru = 0;
+            }
+            if (sets[index].lines[i].valid == 0) invalid = 1;
+        }
+        if (!invalid) {
+            for (int i = 0; i < sets[index].lines.size(); i++) {
+                if(sets[index].lines[i].valid && (sets[index].lines[i].lru <= hitLRU) && (sets[index].lines[i].tag != tag)) {
+                    sets[index].lines[i].lru++;
+                }
+            }
+        }
+        else {
+            for (int i = 0; i < sets[index].lines.size(); i++) {
+                if(sets[index].lines[i].valid && (sets[index].lines[i].tag != tag)) {
+                    sets[index].lines[i].lru++;
+                }
+            }
+        }
+    }
+    
 
     std::string formatValue(unsigned int value, bool binary = false, std::size_t width = 8) {
         if (binary) {

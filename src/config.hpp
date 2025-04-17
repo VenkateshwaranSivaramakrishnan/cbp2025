@@ -4,6 +4,7 @@
 #define CONFIG_HPP
 
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <cmath>
 #include <bitset>
@@ -23,15 +24,15 @@ namespace config {
 
     // === Base Parameters ===
     // Bimodal
-    constexpr std::size_t BM_INDEX_WIDTH = 9; // Number of Index bits
+    constexpr std::size_t BM_INDEX_WIDTH = 15; // Number of Index bits
     constexpr std::size_t BM_CTR_WIDTH = 3; // n-bit counter
     // Cache
-    constexpr std::size_t CACHE_N_INDEX_WIDTH = 9; // Index field width of N-th Cache/Table
+    constexpr std::size_t CACHE_N_INDEX_WIDTH = 12; // Index field width of N-th Cache/Table
     constexpr std::size_t CACHE_N_ASSOC = 4; // Associativity of N-th Cache/Table
     constexpr std::size_t CACHE_N_TAG_WIDTH = 11; // Tag field width in N-th Cache/Table
     constexpr std::size_t CACHE_N_CTR_WIDTH = 3; // Counter field width in N-th Cache/Table
     constexpr std::size_t CACHE_N_U_WIDTH = 2; // Usefulness field width in N-th Cache/Table
-    constexpr std::size_t CACHE_N_U_RST_CNT = 25000; // Branch count to reset the usefulness counters
+    constexpr std::size_t CACHE_N_U_RST_CNT = 250000; // Branch count to reset the usefulness counters
     constexpr std::size_t CACHE_N_VALID_WIDTH = 1; // Valid field width in N-th Cache/Table
     // Pattern History
     constexpr std::size_t PHR_WIDTH = 388; // Number of branch history bits stored by the PHR 
@@ -39,6 +40,8 @@ namespace config {
     constexpr std::size_t EXPECTED_HW_BUDGET_BITS = 192*1024*8; // Hardware budget in bits
 
     // === Derived Parameters ===
+    constexpr std::size_t CACHE_N_LRU_BITS = (CACHE_N_ASSOC > 1) ? log2(CACHE_N_ASSOC) : 1; // Number of LRU bits
+    constexpr std::size_t CACHE_N_LRU_MAX = (1 << CACHE_N_LRU_BITS) - 1; // Maximum LRU count 
     constexpr std::size_t CACHE_N_SET = 1 << CACHE_N_INDEX_WIDTH; // Number of Sets in N-th Cache/Table
 
     // === Derived Functions ===
@@ -108,7 +111,7 @@ void printConfig() {
 
     // Column widths
     constexpr int w1 = 35;
-    constexpr int w2 = 36;
+    constexpr int w2 = 38;
     constexpr int w3 = 46;
 
     auto printRow = [&](const std::string& a, const std::string& b, const std::string& c) {

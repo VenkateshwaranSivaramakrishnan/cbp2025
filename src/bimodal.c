@@ -21,7 +21,8 @@ private:
     // Helper method to get the index into the prediction table based on the PC
     unsigned int getTableIndex(unsigned int PC) {
         // Extract the lower `indexBits` of the Program Counter to index the prediction table
-        return PC & ((1 << indexBits) - 1);
+        // Ignore the last 2 bits (i.e., divide by 4), then extract `indexBits` bits
+        return (PC >> 2) & ((1 << indexBits) - 1);
     }
 
 public:

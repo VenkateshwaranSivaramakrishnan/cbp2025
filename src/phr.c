@@ -52,14 +52,14 @@ public:
      * @param j_max Maximum value of j (inclusive) for folding.
      * @return A 9-bit std::bitset representing the folded index.
      */
-    std::bitset<9> foldPHR_3(uint32_t PC,
-                           int i_min = 1, int i_max = 11,
-                           int j_min = 1, int j_max = 11) const {
-        std::bitset<8> folded;
+    std::bitset<12> foldPHR_3(uint32_t PC,
+                           int i_min = 1, int i_max = 17,
+                           int j_min = 1, int j_max = 17) const {
+        std::bitset<11> folded;
 
         for (int i = i_min; i <= i_max; ++i) {
-            for (int k = 0; k < 8; ++k) {
-                int pos = 16 * i + 8 - 2 * k;  // PHR[16i + 8, 16i + 6, ..., 16i - 6]
+            for (int k = 0; k < 11; ++k) {
+                int pos = 22 * i + 12 - 2 * k;  // PHR[16i + 8, 16i + 6, ..., 16i - 6]
                 if (pos < config::PHR_WIDTH) {
                     folded[k] = folded[k] ^ PHR[pos];
                 }
@@ -67,8 +67,8 @@ public:
         }
 
         for (int j = j_min; j <= j_max; ++j) {
-            for (int k = 0; k < 8; ++k) {
-                int pos = 16 * j + 1 - 2 * k;  // PHR[16j + 1, 16j - 1, ..., 16j - 13]
+            for (int k = 0; k < 11; ++k) {
+                int pos = 22 * j + 1 - 2 * k;  // PHR[16j + 1, 16j - 1, ..., 16j - 13]
                 if (pos < config::PHR_WIDTH) {
                     folded[k] = folded[k] ^ PHR[pos];
                 }
@@ -76,11 +76,11 @@ public:
         }
 
         // Set the 9th bit as PC[5]
-        std::bitset<9> finalIndex;
-        for (int k = 0; k < 8; ++k) {
+        std::bitset<12> finalIndex;
+        for (int k = 0; k < 11; ++k) {
             finalIndex[k] = folded[k];
         }
-        finalIndex[8] = (PC >> 5) & 0x1;
+        finalIndex[11] = (PC >> 5) & 0x1;
 
         return finalIndex;
     }
@@ -107,14 +107,14 @@ public:
      * @param j_max Maximum value of j (inclusive) for folding.
      * @return A 9-bit std::bitset representing the folded index.
      */
-    std::bitset<9> foldPHR_2(uint32_t PC,
-                           int i_min = 3, int i_max = 1,
-                           int j_min = 3, int j_max = 1) const {
-        std::bitset<8> folded;
+    std::bitset<12> foldPHR_2(uint32_t PC,
+                           int i_min = 1, int i_max = 5,
+                           int j_min = 1, int j_max = 5) const {
+        std::bitset<11> folded;
 
         for (int i = i_min; i <= i_max; ++i) {
-            for (int k = 0; k < 8; ++k) {
-                int pos = 16 * i + 8 - 2 * k;  // PHR[16i + 8, 16i + 6, ..., 16i - 6]
+            for (int k = 0; k < 11; ++k) {
+                int pos = 22 * i + 12 - 2 * k;  // PHR[16i + 8, 16i + 6, ..., 16i - 6]
                 if (pos < config::PHR_WIDTH) {
                     folded[k] = folded[k] ^ PHR[pos];
                 }
@@ -122,8 +122,8 @@ public:
         }
 
         for (int j = j_min; j <= j_max; ++j) {
-            for (int k = 0; k < 8; ++k) {
-                int pos = 16 * j + 1 - 2 * k;  // PHR[16j + 1, 16j - 1, ..., 16j - 13]
+            for (int k = 0; k < 11; ++k) {
+                int pos = 22 * j + 1 - 2 * k;  // PHR[16j + 1, 16j - 1, ..., 16j - 13]
                 if (pos < config::PHR_WIDTH) {
                     folded[k] = folded[k] ^ PHR[pos];
                 }
@@ -131,11 +131,11 @@ public:
         }
 
         // Set the 9th bit as PC[5]
-        std::bitset<9> finalIndex;
-        for (int k = 0; k < 8; ++k) {
+        std::bitset<12> finalIndex;
+        for (int k = 0; k < 11; ++k) {
             finalIndex[k] = folded[k];
         }
-        finalIndex[8] = (PC >> 5) & 0x1;
+        finalIndex[11] = (PC >> 5) & 0x1;
 
         return finalIndex;
     }
@@ -158,32 +158,60 @@ public:
      * @param PC The Program Counter.
      * @return A 9-bit std::bitset representing the folded index.
      */
-    std::bitset<9> foldPHR_1(uint32_t PC) const {
-        std::bitset<8> folded;
+    std::bitset<12> foldPHR_1(uint32_t PC) const {
+        std::bitset<11> folded;
 
-        for (int k = 0; k < 8; ++k) {
-            int pos = 20 - 2 * k;  // PHR[20, 18, 16, ..., 6]
+        for (int k = 0; k < 11; ++k) {
+            int pos = 26 - 2 * k;  // PHR[20, 18, 16, ..., 6]
             if (pos < config::PHR_WIDTH) {
                 folded[k] = folded[k] ^ PHR[pos];
             }
         }
 
-        for (int k = 0; k < 8; ++k) {
-            int pos = 15 - 2 * k;  // PHR[15, 13, 11, ..., 1]
+        for (int k = 0; k < 11; ++k) {
+            int pos = 21 - 2 * k;  // PHR[15, 13, 11, ..., 1]
             if (pos < config::PHR_WIDTH) {
                 folded[k] = folded[k] ^ PHR[pos];
             }
         }
 
         // Set the 9th bit as PC[5]
-        std::bitset<9> finalIndex;
-        for (int k = 0; k < 8; ++k) {
+        std::bitset<12> finalIndex;
+        for (int k = 0; k < 11; ++k) {
             finalIndex[k] = folded[k];
         }
-        finalIndex[8] = (PC >> 5) & 0x1;
+        finalIndex[11] = (PC >> 5) & 0x1;
 
         return finalIndex;
     }
+
+    #include <boost/dynamic_bitset.hpp>
+
+    /**
+     * @brief Folds a portion of the Pattern History Register (PHR) into a compact index using XOR.
+     *
+     * This function reduces a segment of the PHR of length L into an index of 'n' bits, by
+     * repeatedly XORing segments of 'n' bits until the full history is folded.
+     *
+     * @param phr The Pattern History Register (as a dynamic_bitset)
+     * @param n   Target length to fold into (e.g., 11 bits)
+     * @param L   Length of the PHR segment to fold (must be <= phr.size())
+     * @return boost::dynamic_bitset<> The folded index of size 'n'
+     */
+    boost::dynamic_bitset<> foldPHR(uint64_t PC, unsigned int n) const {
+        assert(n > 0);
+
+        boost::dynamic_bitset<> folded(config::CACHE_N_INDEX_WIDTH);  // Initialize n-bit folded index to 0
+
+        for (unsigned int i = 0; i < n; ++i) {
+            if (PHR[i]) {
+                folded[i % config::CACHE_N_INDEX_WIDTH].flip();  // XOR using modular folding
+            }
+        }
+
+        return folded;
+    }
+
 
     /**
      * @brief Computes the Alder Lake-style hash of a branch and target address.

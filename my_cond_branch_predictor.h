@@ -172,14 +172,23 @@ class SampleCondPredictor
                 case 1:
                     T1.updateCtr(index1, tag, resolveDir);
                     T1.updateUCtr(index1, tag, predDir, altPred, resolveDir);
+                    if (resolveDir == predDir) {
+                        T1.updateCacheLinesLRU(index1, tag);
+                    }
                     break;
                 case 2:
                     T2.updateCtr(index2, tag, resolveDir);
                     T2.updateUCtr(index2, tag, predDir, altPred, resolveDir);
+                    if (resolveDir == predDir) {
+                        T2.updateCacheLinesLRU(index2, tag);
+                    }
                     break;
                 case 3:
                     T3.updateCtr(index3, tag, resolveDir);
                     T3.updateUCtr(index3, tag, predDir, altPred, resolveDir);
+                    if (resolveDir == predDir) {
+                        T3.updateCacheLinesLRU(index3, tag);
+                    }
                     break;
                 default:
                     std::cerr << "Invalid predictor selected: T" << selectedT << std::endl;
@@ -189,8 +198,10 @@ class SampleCondPredictor
         
             PatternHistoryTable* T[] = { &T1, &T2, &T3 };
             uint32_t index[] = { index1, index2, index3 };
-            tryAllocate(selectedT, tag, predDir, T, index);
-        
+            if (resolveDir != predDir) {
+                tryAllocate(selectedT, tag, predDir, T, index);
+            }
+
             // Reset counter every n-branch lookup
             T1.resetUCtr(hist_to_use.branchCount);
             T2.resetUCtr(hist_to_use.branchCount);
