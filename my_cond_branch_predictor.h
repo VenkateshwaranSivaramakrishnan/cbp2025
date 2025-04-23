@@ -14,6 +14,27 @@ struct history {
     {}
 };
 
+
+// Strictly for debug purpose
+// Create and open the trace file (append mode)
+/**
+ * @brief Logs branch prediction trace to file.
+ * 
+ * @param PC         Branch instruction address (hex)
+ * @param target     Next PC / target address (hex)
+ * @param predDir    Predicted direction (bool: 0/1)
+ * @param resolveDir Actual outcome (bool: 0/1)
+ */
+ void printTrace(std::ofstream& trace_file, uint64_t PC, uint64_t target, bool predDir, bool resolveDir) {
+    if (trace_file.is_open()) {
+        trace_file << "0x" << std::hex << PC
+                   << ",0x" << target
+                   << "," << std::dec << static_cast<int>(predDir)
+                   << "," << static_cast<int>(resolveDir)
+                   << "\n";
+    }
+}
+
 class SampleCondPredictor
 {       
     public:
@@ -24,6 +45,9 @@ class SampleCondPredictor
 
         history active_hist;
         std::unordered_map<uint64_t/*key*/, history/*val*/> pred_time_histories;
+
+        // Debug trace file
+        std::ofstream trace_file;
         
     public:
 
@@ -32,7 +56,11 @@ class SampleCondPredictor
         T1(config::CACHE_N_SET, config::CACHE_N_ASSOC),
         T2(config::CACHE_N_SET, config::CACHE_N_ASSOC),
         T3(config::CACHE_N_SET, config::CACHE_N_ASSOC)
-        {}
+        {
+            if (config::GEN_INSTR_TRACE) {
+                trace_file.open("trace_debug.txt", std::ios::app);
+            }
+        }
 
         void setup()
         {
@@ -57,12 +85,13 @@ class SampleCondPredictor
             pred_time_histories.emplace(get_unique_inst_id(seq_no, piece), active_hist);
 
             bool prediction;
+            uint32_t predictionCtr;
 
             unsigned int index1 = static_cast<unsigned int>(active_hist.PHR.foldPHR_1(PC).to_ulong());
             unsigned int index2 = static_cast<unsigned int>(active_hist.PHR.foldPHR_2(PC).to_ulong());
             unsigned int index3 = static_cast<unsigned int>(active_hist.PHR.foldPHR_3(PC).to_ulong());
                 
-            unsigned int tag = static_cast<unsigned int>(active_hist.PHR.generateTag().to_ulong());
+            unsigned int tag = active_hist.PHR.generateTag(PC);
                 
             std::bitset<4> results;
             results[0] = T0.predict(PC); // Taken/Not Taken
@@ -87,19 +116,37 @@ class SampleCondPredictor
                     prediction = results[0];
                     break;
                 case 1:
-                    prediction = T1.accessCtrOnHit(index1, tag);
+                    predictionCtr = T1.accessCtrOnHit(index1, tag);
+                    prediction =  (predictionCtr >= (1 << (config::CACHE_N_CTR_WIDTH - 1)));
                     break;
                 case 2:
-                    prediction = T2.accessCtrOnHit(index2, tag);
+                    predictionCtr = T2.accessCtrOnHit(index2, tag);
+                    prediction =  (predictionCtr >= (1 << (config::CACHE_N_CTR_WIDTH - 1)));
                     break;
                 case 3:
-                    prediction = T3.accessCtrOnHit(index3, tag);
+                    predictionCtr = T3.accessCtrOnHit(index3, tag);
+                    prediction =  (predictionCtr >= (1 << (config::CACHE_N_CTR_WIDTH - 1)));
                     break;
                 default:
                     std::cerr << "Invalid predictor selected: T" << selectedT << std::endl;
                     assert(false);  // Optional: terminate on unexpected case
                     break;
             }
+
+            //if(PC == 0x449cd4){
+            //    std::cout << "PC=0x" << std::hex << std::setw(8) << PC
+            //        << ", Hash="<< get_unique_inst_id(seq_no, piece)
+            //        << std::dec << ", Pred=" << prediction
+            //        << ", Index1=" << index1
+            //        << ", Index2=" << index2
+            //        << ", Index3=" << index3 
+            //        << ", Tag=" << tag
+            //        << ", SelectedT=" << selectedT
+            //        << std::endl;
+            //        T1.printCacheSet(index1);
+            //        T2.printCacheSet(index2);
+            //        T3.printCacheSet(index3);
+            //}
 
             return prediction;
         }
@@ -119,7 +166,7 @@ class SampleCondPredictor
             unsigned int index2 = static_cast<unsigned int>(hist_to_use.PHR.foldPHR_2(PC).to_ulong());
             unsigned int index3 = static_cast<unsigned int>(hist_to_use.PHR.foldPHR_3(PC).to_ulong());
                 
-            unsigned int tag = static_cast<unsigned int>(hist_to_use.PHR.generateTag().to_ulong());
+            unsigned int tag = hist_to_use.PHR.generateTag(PC);
 
             std::bitset<4> results;
             results[0] = T0.predict(PC); // Taken/Not Taken
@@ -160,11 +207,12 @@ class SampleCondPredictor
                     altPred = T2.accessCtrOnHit(index2, tag);
                     break;
                 default:
-                    std::cerr << "Invalid alternate predictor selected: T" << selectedAlt << std::endl;
-                    assert(false);  // Optional: terminate on unexpected case
+                    altPred = !predDir;
+                    //std::cerr << "Invalid alternate predictor selected: T" << selectedAlt << std::endl;
+                    //assert(false);  // Optional: terminate on unexpected case
                     break;
             }
-
+            
             switch (selectedT) {
                 case 0:
                     T0.update(PC, resolveDir);
@@ -195,7 +243,7 @@ class SampleCondPredictor
                     assert(false);  // Optional: terminate on unexpected case
                     break;
             }
-        
+
             PatternHistoryTable* T[] = { &T1, &T2, &T3 };
             uint32_t index[] = { index1, index2, index3 };
             if (resolveDir != predDir) {
@@ -208,6 +256,28 @@ class SampleCondPredictor
             T3.resetUCtr(hist_to_use.branchCount);
 
             pred_time_histories.erase(pred_hist_key);
+            if (config::GEN_INSTR_TRACE){
+                printTrace(trace_file, PC, target, predDir, resolveDir);
+            }
+            
+            //if(PC == 0x449cd4 && resolveDir != predDir){
+            //    std::cout << "PC=0x" << std::hex << std::setw(8) << PC
+            //        << ", Hash=" << get_unique_inst_id(seq_no, piece)
+            //        << std::dec << ", Pred=" << predDir
+            //        << ", Actual=" << resolveDir
+            //        << ", Index1=" << index1
+            //        << ", Index2=" << index2
+            //        << ", Index3=" << index3 
+            //        << ", Tag=" << tag
+            //        << ", SelectedT=" << selectedT
+            //        << ", SelectedAlt=" << selectedAlt
+            //        << ", AltPred=" << altPred
+            //        << std::endl;
+            //        T1.printCacheSet(index1);
+            //        T2.printCacheSet(index2);
+            //        T3.printCacheSet(index3);
+            //}
+
         }
 
 };

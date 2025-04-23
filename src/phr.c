@@ -276,33 +276,48 @@ public:
     }
 
     /**
-     * @brief Generates an 11-bit tag by XOR-folding segments of the Path History Register (PHR).
+     * @brief Generates a tag by XOR-folding segments of the Path History Register (PHR) into an unsigned int.
      *
-     * The tag is computed by XOR-ing consecutive 11-bit segments of the PHR:
-     *   Tag = h[10:0] ⊕ h[21:11] ⊕ h[32:22] ⊕ ... ⊕ h[n:m]
-     * 
-     * If the final chunk has fewer than 11 bits, it is still included in the XOR
-     * by zero-padding the missing bits.
+     * The tag is computed by slicing the PHR into consecutive segments of width `CACHE_N_TAG_WIDTH`
+     * and XOR-ing each segment into a single integer result:
      *
-     * @return A std::bitset<11> representing the folded tag.
+     *   tag = h[W-1:0] ⊕ h[2W-1:W] ⊕ h[3W-1:2W] ⊕ ... ⊕ h[n:m]
+     *
+     * where W = CACHE_N_TAG_WIDTH. If the final segment contains fewer than W bits, it is padded with zeros.
+     * The result is masked to ensure it is strictly W bits wide.
+     *
+     * @return An unsigned int representing the folded tag of width `CACHE_N_TAG_WIDTH`.
      */
-    std::bitset<11> generateTag() const {
-        std::bitset<11> tag;
-
+     unsigned int generateTag(uint64_t PC) const {
+        unsigned int foldedHistory = 0;
+        unsigned int tag = 0;
         size_t offset = 0;
+    
         while (offset < PHR.size()) {
-            std::bitset<11> chunk;
-
-            for (size_t i = 0; i < 11 && (offset + i) < PHR.size(); ++i) {
-                chunk[i] = PHR[offset + i];
+            unsigned int chunk = 0;
+    
+            // Build a TAG_WIDTH-bit chunk from PHR
+            for (size_t i = 0; i < config::CACHE_N_TAG_WIDTH && (offset + i) < PHR.size(); ++i) {
+                if (PHR[offset + i])
+                    chunk |= (1u << i);
             }
-
-            tag ^= chunk;
-            offset += 11;
+    
+            foldedHistory ^= chunk;
+            offset += config::CACHE_N_TAG_WIDTH;
         }
+        
+        // Ensure tag is within desired width
+        foldedHistory = foldedHistory & ((1u << config::CACHE_N_TAG_WIDTH) - 1);
 
-        return tag;
-    }   
+        tag = (PC ^ rotateRight(foldedHistory, 5)) ^ (foldedHistory >> 7);
+
+        return tag & ((1 << config::CACHE_N_TAG_WIDTH) - 1);
+    }
+      
+    // Rotate-right helper
+    static inline uint32_t rotateRight(uint32_t val, unsigned int r) {
+        return (val >> r) | (val << (32 - r));
+    }
 
     /**
      * @brief Prints the current state of the Path History Register (PHR).

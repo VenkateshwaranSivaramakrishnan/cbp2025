@@ -21,6 +21,7 @@ namespace config {
     // === Debug Parameters ===
     constexpr std::size_t DEBUG = 1; // 0: no prints, 1: verbose debug prints  
     constexpr std::size_t PRINT_FORMAT_BINARY = 0;  // 1 = binary, 0 = decimal
+    constexpr std::size_t GEN_INSTR_TRACE = 1; // 0: disable, 1: enable generation of instruction trace log
 
     // === Base Parameters ===
     // Bimodal
@@ -32,7 +33,7 @@ namespace config {
     constexpr std::size_t CACHE_N_TAG_WIDTH = 11; // Tag field width in N-th Cache/Table
     constexpr std::size_t CACHE_N_CTR_WIDTH = 3; // Counter field width in N-th Cache/Table
     constexpr std::size_t CACHE_N_U_WIDTH = 2; // Usefulness field width in N-th Cache/Table
-    constexpr std::size_t CACHE_N_U_RST_CNT = 250000; // Branch count to reset the usefulness counters
+    constexpr std::size_t CACHE_N_U_RST_CNT = 25000; // Branch count to reset the usefulness counters
     constexpr std::size_t CACHE_N_VALID_WIDTH = 1; // Valid field width in N-th Cache/Table
     // Pattern History
     constexpr std::size_t PHR_WIDTH = 388; // Number of branch history bits stored by the PHR 

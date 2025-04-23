@@ -168,4 +168,7 @@ void notify_instr_commit(uint64_t seq_no, uint8_t piece, uint64_t pc, const bool
 //
 void endCondDirPredictor ()
 {
+    if (config::GEN_INSTR_TRACE){
+        if (cond_predictor_impl.trace_file.is_open()) cond_predictor_impl.trace_file.close();
+    }
 }
