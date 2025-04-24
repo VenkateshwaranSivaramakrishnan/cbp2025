@@ -92,7 +92,8 @@ void spec_update(uint64_t seq_no, uint8_t piece, uint64_t pc, InstClass inst_cla
             assert(false);
     }
 
-    if(inst_class == InstClass::condBranchInstClass)
+    //if(inst_class == InstClass::condBranchInstClass)
+    if (true)
     {
         cond_predictor_impl.history_update(seq_no, piece, pc, resolve_dir, next_pc);
     }

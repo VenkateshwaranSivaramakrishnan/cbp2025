@@ -6,11 +6,13 @@
 struct history {
     PatternHistoryRegister PHR;
     uint64_t branchCount;
+    uint64_t seqNo;
 
     // Constructor
     history()
         : PHR(config::PHR_WIDTH),  // Initialize PHR with specified width
-        branchCount(0)           // Default to 0 
+        branchCount(0),            // Default to 0 
+        seqNo(0)                     // Sequence Number
     {}
 };
 
@@ -161,6 +163,12 @@ class SampleCondPredictor
             // Update Policy
             const auto pred_hist_key = get_unique_inst_id(seq_no, piece);
             const auto& hist_to_use = pred_time_histories.at(pred_hist_key);
+
+            
+            if (resolveDir != predDir) {
+                active_hist = hist_to_use;
+                active_hist.PHR.updatePHR(PC, target, resolveDir);
+            }
 
             unsigned int index1 = static_cast<unsigned int>(hist_to_use.PHR.foldPHR_1(PC).to_ulong());
             unsigned int index2 = static_cast<unsigned int>(hist_to_use.PHR.foldPHR_2(PC).to_ulong());
