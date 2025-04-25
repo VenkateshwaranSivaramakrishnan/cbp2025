@@ -35,6 +35,9 @@ namespace config {
     constexpr std::size_t CACHE_N_U_WIDTH = 2; // Usefulness field width in N-th Cache/Table
     constexpr std::size_t CACHE_N_U_RST_CNT = 25000; // Branch count to reset the usefulness counters
     constexpr std::size_t CACHE_N_VALID_WIDTH = 1; // Valid field width in N-th Cache/Table
+    // AltPred Confidence Table
+    constexpr std::size_t ALT_PRED_CONF_T_SIZE = 6; // Number of entries in the alternate prediction confidence table
+    constexpr std::size_t ALT_PRED_CONF_T_WIDTH = 5; // Confidence counter width of the alternate prediction confidence table
     // Pattern History
     constexpr std::size_t PHR_WIDTH = 388; // Number of branch history bits stored by the PHR 
     // Budget

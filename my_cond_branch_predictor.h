@@ -6,16 +6,13 @@
 struct history {
     PatternHistoryRegister PHR;
     uint64_t branchCount;
-    uint64_t seqNo;
 
     // Constructor
     history()
         : PHR(config::PHR_WIDTH),  // Initialize PHR with specified width
-        branchCount(0),            // Default to 0 
-        seqNo(0)                     // Sequence Number
+        branchCount(0)            // Default to 0 
     {}
 };
-
 
 // Strictly for debug purpose
 // Create and open the trace file (append mode)
@@ -45,6 +42,7 @@ class SampleCondPredictor
         PatternHistoryTable T2;
         PatternHistoryTable T3;
 
+        int8_t useAltOnNa[config::ALT_PRED_CONF_T_SIZE];
         history active_hist;
         std::unordered_map<uint64_t/*key*/, history/*val*/> pred_time_histories;
 
@@ -61,6 +59,9 @@ class SampleCondPredictor
         {
             if (config::GEN_INSTR_TRACE) {
                 trace_file.open("trace_debug.txt", std::ios::app);
+            }
+            for (int i = 0; i < config::ALT_PRED_CONF_T_SIZE; i++){
+                useAltOnNa[i] = 0;
             }
         }
 
@@ -113,6 +114,37 @@ class SampleCondPredictor
                 }
             }
 
+             // Step 2: Find selectedAlt (next-highest hit below selectedT among the PHTs)
+             for (int i = selectedT - 1; i >= 1; --i) {
+                if (results[i]) {
+                    selectedAlt = i;
+                    break;
+                }
+            }
+
+            uint8_t altPredCtr;
+            bool altPred;
+
+            switch (selectedAlt) {
+                case 0:
+                    altPredCtr = results[0];
+                    altPred =  (altPredCtr >= (1 << (config::CACHE_N_CTR_WIDTH - 1)));
+                    break;
+                case 1:
+                    altPredCtr = T1.accessCtrOnHit(index1, tag);
+                    altPred =  (altPredCtr >= (1 << (config::CACHE_N_CTR_WIDTH - 1)));
+                    break;
+                case 2:
+                    altPredCtr = T2.accessCtrOnHit(index2, tag);
+                    altPred =  (altPredCtr >= (1 << (config::CACHE_N_CTR_WIDTH - 1)));
+                    break;
+                default:
+                    std::cerr << "Invalid alternate predictor selected: T" << selectedAlt << std::endl;
+                    assert(false);  // Optional: terminate on unexpected case
+                    break;
+            }
+          
+
             switch (selectedT) {
                 case 0:
                     prediction = results[0];
@@ -133,6 +165,19 @@ class SampleCondPredictor
                     std::cerr << "Invalid predictor selected: T" << selectedT << std::endl;
                     assert(false);  // Optional: terminate on unexpected case
                     break;
+            }
+            
+            // Select between main and alternate prediction based on confidence levels.
+            // If the alternate prediction is confident and the current prediction is weak,
+            // prefer the alternate prediction.
+            if (selectedT > 0) {
+                bool altPredConf = isStrong(altPredCtr, config::CACHE_N_CTR_WIDTH);
+                uint8_t altIndex = getUseAltIndex(selectedT, altPredConf);
+                bool hUseAltOnNa = (useAltOnNa[altIndex]);
+
+                if (hUseAltOnNa && !isStrong(predictionCtr, config::CACHE_N_CTR_WIDTH)) {
+                    prediction = altPred;
+                }
             }
 
             //if(PC == 0x449cd4){
@@ -202,22 +247,25 @@ class SampleCondPredictor
                 }
             }
 
+            uint8_t altPredCtr;
             bool altPred;
 
             switch (selectedAlt) {
                 case 0:
-                    altPred = results[0];
+                    altPredCtr = results[0];
+                    altPred =  (altPredCtr >= (1 << (config::CACHE_N_CTR_WIDTH - 1)));
                     break;
                 case 1:
-                    altPred = T1.accessCtrOnHit(index1, tag);
+                    altPredCtr = T1.accessCtrOnHit(index1, tag);
+                    altPred =  (altPredCtr >= (1 << (config::CACHE_N_CTR_WIDTH - 1)));
                     break;
                 case 2:
-                    altPred = T2.accessCtrOnHit(index2, tag);
+                    altPredCtr = T2.accessCtrOnHit(index2, tag);
+                    altPred =  (altPredCtr >= (1 << (config::CACHE_N_CTR_WIDTH - 1)));
                     break;
                 default:
-                    altPred = !predDir;
-                    //std::cerr << "Invalid alternate predictor selected: T" << selectedAlt << std::endl;
-                    //assert(false);  // Optional: terminate on unexpected case
+                    std::cerr << "Invalid alternate predictor selected: T" << selectedAlt << std::endl;
+                    assert(false);  // Optional: terminate on unexpected case
                     break;
             }
             
@@ -255,7 +303,7 @@ class SampleCondPredictor
             PatternHistoryTable* T[] = { &T1, &T2, &T3 };
             uint32_t index[] = { index1, index2, index3 };
             if (resolveDir != predDir) {
-                tryAllocate(selectedT, tag, predDir, T, index);
+                tryAllocate(selectedT, tag, predDir, resolveDir, T, index);
             }
 
             // Reset counter every n-branch lookup
@@ -268,6 +316,19 @@ class SampleCondPredictor
                 printTrace(trace_file, PC, target, predDir, resolveDir);
             }
             
+            // Update alternate prediction confidence table if alternate prediction differs
+            // from the prediction used (i.e., disagreement between altPred and predDir)
+            // This allows the predictor to adaptively choose between the main and alternate
+            // predictions in the future
+            if (selectedT > 0) {
+                bool altPredConf = isStrong(altPredCtr, config::CACHE_N_CTR_WIDTH);
+                uint8_t altIndex = getUseAltIndex(selectedT, altPredConf);
+
+                if (predDir != altPred) {
+                    ctrUpdate(useAltOnNa[altIndex], (altPred == resolveDir), config::ALT_PRED_CONF_T_WIDTH);
+                }
+            }
+
             //if(PC == 0x449cd4 && resolveDir != predDir){
             //    std::cout << "PC=0x" << std::hex << std::setw(8) << PC
             //        << ", Hash=" << get_unique_inst_id(seq_no, piece)

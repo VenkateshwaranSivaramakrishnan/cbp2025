@@ -15,7 +15,7 @@
  * @param T[] Array of PatternHistoryTable components (T0 to T3)
  * @param index Array of indices (one per table): index[0] = index1, index[1] = index2, index[2] = index3
  */
-void tryAllocate(int selectedT, unsigned int tag, bool prediction,
+void tryAllocate(int selectedT, unsigned int tag, bool prediction, bool resolveDir,
                   PatternHistoryTable* T[], uint32_t index[]) {
     if (selectedT >= 3) return;  // Nothing to allocate beyond T3
  
@@ -27,7 +27,7 @@ void tryAllocate(int selectedT, unsigned int tag, bool prediction,
             if (!lines[j].valid) {  // If an invalid cache line is found, replace it
                 lines[j].valid = true;
                 lines[j].tag = tag;
-                lines[j].ctr = (1 << (config::CACHE_N_CTR_WIDTH - 1));  // Weakly correct
+                lines[j].ctr = (1 << (config::CACHE_N_CTR_WIDTH - 1)) + (resolveDir ? 0 : -1); // Set counter to weakly taken/not-taken based on resolveDir
                 lines[j].u = 0;
                 T[i]->updateCacheLinesLRU(index[i], tag);
                 return;
@@ -60,7 +60,7 @@ void tryAllocate(int selectedT, unsigned int tag, bool prediction,
         if (evictFound) {
             lines[evictWay].valid = true;
             lines[evictWay].tag = tag;
-            lines[evictWay].ctr = (1 << (config::CACHE_N_CTR_WIDTH - 1));  // Weakly correct
+            lines[evictWay].ctr = (1 << (config::CACHE_N_CTR_WIDTH - 1)) + (resolveDir ? 0 : -1);  // Set counter to weakly taken/not-taken based on resolveDir
             lines[evictWay].u = 0;
             T[i]->updateCacheLinesLRU(index[i], tag);
             return;
@@ -147,4 +147,55 @@ void tryAllocate(int selectedT, unsigned int tag, bool prediction,
 //            }
 //        }
 //    }
+}
+
+/**
+ * @brief Computes the index into the `use_alt_on_na` table.
+ *
+ * This index determines which counter to access based on the TAGE hit bank
+ * and whether the alternate prediction is considered confident. This logic
+ * allows for bank-aware and confidence-aware adaptation in using alternate predictions.
+ *
+ * @param hitBank The index of the bank that provided the longest matching prediction (1-based).
+ * @param altConf Boolean flag indicating whether the alternate prediction is confident.
+ * @return The computed index into the `use_alt_on_na` table.
+ */
+inline int getUseAltIndex(int hitBank, bool altConf) {
+    return (((hitBank - 1) / 1) << 1) + (altConf ? 1 : 0);
+}
+
+/**
+ * @brief Determines whether a saturating counter is in a strong state.
+ *
+ * A counter is considered "strong" if it is not in the weak mid-range zone,
+ * i.e., not equal to the center or just below the center of its representable range.
+ *
+ * @param ctr The current value of the counter (unsigned).
+ * @param nbits The width of the counter in bits (e.g., 2 for a 2-bit counter).
+ * @return True if the counter is in a strong state, false if weak.
+ */
+inline bool isStrong(uint8_t ctr, int nbits) {
+    int mid = 1 << (nbits - 1);  // midpoint
+    return (ctr != mid) && (ctr != mid - 1);  // weak if near center
+}
+
+/**
+ * @brief Performs a saturating update on an unsigned n-bit counter.
+ *
+ * If the branch outcome was taken, the counter is incremented (up to max value).
+ * If not taken, it is decremented (down to zero). The counter is guaranteed to stay
+ * within the range [0, 2^nbits - 1].
+ *
+ * @param ctr Reference to the counter variable to be updated.
+ * @param taken The actual outcome of the branch (true if taken, false otherwise).
+ * @param nbits The number of bits used to represent the counter.
+ */
+void ctrUpdate(int8_t& ctr, bool taken, int nbits) {
+    unsigned int maxU = (1 << nbits) - 1;
+    if(taken) {
+        if(ctr < maxU) ctr++;
+    }
+    else{
+        if(ctr > 0) ctr--;
+    }
 }
