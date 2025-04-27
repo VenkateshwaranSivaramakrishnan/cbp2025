@@ -173,7 +173,7 @@ class SampleCondPredictor
             if (selectedT > 0) {
                 bool altPredConf = isStrong(altPredCtr, config::CACHE_N_CTR_WIDTH);
                 uint8_t altIndex = getUseAltIndex(selectedT, altPredConf);
-                bool hUseAltOnNa = (useAltOnNa[altIndex]);
+                bool hUseAltOnNa = (useAltOnNa[altIndex] >= (1 << (config::ALT_PRED_CONF_T_WIDTH - 1)));
 
                 if (hUseAltOnNa && !isStrong(predictionCtr, config::CACHE_N_CTR_WIDTH)) {
                     prediction = altPred;
@@ -181,15 +181,17 @@ class SampleCondPredictor
             }
 
             //if(PC == 0x449cd4){
-            //    std::cout << "PC=0x" << std::hex << std::setw(8) << PC
-            //        << ", Hash="<< get_unique_inst_id(seq_no, piece)
-            //        << std::dec << ", Pred=" << prediction
-            //        << ", Index1=" << index1
-            //        << ", Index2=" << index2
-            //        << ", Index3=" << index3 
-            //        << ", Tag=" << tag
-            //        << ", SelectedT=" << selectedT
-            //        << std::endl;
+            //    DEBUG_PRINT(
+            //        "PC=0x%08x, Hash=%lu, Pred=%d, Index1=%d, Index2=%d, Index3=%d, Tag=%u, SelectedT=%d\n",
+            //        PC,
+            //        get_unique_inst_id(seq_no, piece),
+            //        prediction,
+            //        index1,
+            //        index2,
+            //        index3,
+            //        tag,
+            //        selectedT
+            //    );
             //        T1.printCacheSet(index1);
             //        T2.printCacheSet(index2);
             //        T3.printCacheSet(index3);
@@ -311,6 +313,7 @@ class SampleCondPredictor
             T2.resetUCtr(hist_to_use.branchCount);
             T3.resetUCtr(hist_to_use.branchCount);
 
+            int temp = hist_to_use.branchCount;
             pred_time_histories.erase(pred_hist_key);
             if (config::GEN_INSTR_TRACE){
                 printTrace(trace_file, PC, target, predDir, resolveDir);
@@ -320,35 +323,39 @@ class SampleCondPredictor
             // from the prediction used (i.e., disagreement between altPred and predDir)
             // This allows the predictor to adaptively choose between the main and alternate
             // predictions in the future
+            int altIndex = 0;
             if (selectedT > 0) {
                 bool altPredConf = isStrong(altPredCtr, config::CACHE_N_CTR_WIDTH);
                 uint8_t altIndex = getUseAltIndex(selectedT, altPredConf);
-
                 if (predDir != altPred) {
                     ctrUpdate(useAltOnNa[altIndex], (altPred == resolveDir), config::ALT_PRED_CONF_T_WIDTH);
                 }
             }
-
-            //if(PC == 0x449cd4 && resolveDir != predDir){
-            //    std::cout << "PC=0x" << std::hex << std::setw(8) << PC
-            //        << ", Hash=" << get_unique_inst_id(seq_no, piece)
-            //        << std::dec << ", Pred=" << predDir
-            //        << ", Actual=" << resolveDir
-            //        << ", Index1=" << index1
-            //        << ", Index2=" << index2
-            //        << ", Index3=" << index3 
-            //        << ", Tag=" << tag
-            //        << ", SelectedT=" << selectedT
-            //        << ", SelectedAlt=" << selectedAlt
-            //        << ", AltPred=" << altPred
-            //        << std::endl;
-            //        T1.printCacheSet(index1);
-            //        T2.printCacheSet(index2);
-            //        T3.printCacheSet(index3);
-            //}
-
+            if (config::DEBUG) {
+                if(PC == 0x449cd4 && resolveDir != predDir){
+                    dPrint(
+                        "PC=0x%08x, Hash=%lu, Pred=%d, Actual=%d, Index1=%d, Index2=%d, Index3=%d, Tag=%u, SelectedT=%d, SelectedAlt=%d, AltPred=%d, Target=%d, Count=%d, AltPredTable=%d\n",
+                        PC,
+                        get_unique_inst_id(seq_no, piece),
+                        predDir,
+                        resolveDir,
+                        index1,
+                        index2,
+                        index3,
+                        tag,
+                        selectedT,
+                        selectedAlt,
+                        altPred,
+                        target,
+                        temp,
+                        static_cast<int>(useAltOnNa[altIndex])
+                    );                
+                        T1.printCacheSet(index1);
+                        T2.printCacheSet(index2);
+                        T3.printCacheSet(index3);
+                }
+            }
         }
-
 };
 // =================
 // Predictor End

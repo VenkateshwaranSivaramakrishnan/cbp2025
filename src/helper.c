@@ -34,37 +34,38 @@ void tryAllocate(int selectedT, unsigned int tag, bool prediction, bool resolveD
             }
         }
         // If all lines are valid, enforce LRU replacement policy (implies all N-ways are occupied)
-        bool evictFound = false;
-        uint32_t evictWay = 0;
+        //bool evictFound = false;
+        //uint32_t evictWay = 0;
         for (int j = 0; j < lines.size(); j++) {
-            if (lines[j].u == 0) {
-                if (!evictFound){
-                    evictFound = true;
-                    evictWay = j;
-                }
-                else {
-                    if (lines[j].lru > lines[evictWay].lru){
-                        evictWay = j;
-                    }
-                }
+            //if (lines[j].u == 0) {
+            //    if (!evictFound){
+            //        evictFound = true;
+            //        evictWay = j;
+            //    }
+            //    else {
+            //        if (lines[j].lru > lines[evictWay].lru){
+            //            evictWay = j;
+            //        }
+            //    }
+            //}
+        //}
+            if (lines[j].valid && lines[j].u == 0 && (lines[j].lru == config::CACHE_N_LRU_MAX)) {
+                lines[j].valid = true;
+                lines[j].tag = tag;
+                lines[j].ctr = (1 << (config::CACHE_N_CTR_WIDTH - 1)) + (resolveDir ? 0 : -1);  // Set counter to weakly taken/not-taken based on resolveDir
+                lines[j].u = 0;
+                T[i]->updateCacheLinesLRU(index[i], tag);
+                return;
             }
         }
-            //if (lines[j].valid && lines[j].u == 0 && (lines[j].lru == config::CACHE_N_LRU_MAX)) {
-            //    lines[j].valid = true;
-            //    lines[j].tag = tag;
-            //    lines[j].ctr = (1 << (config::CACHE_N_CTR_WIDTH - 1));  // Weakly correct
-            //    lines[j].u = 0;
-            //    T[i]->updateCacheLinesLRU(index[i], tag);
-            //    return;
-            //}
-        if (evictFound) {
-            lines[evictWay].valid = true;
-            lines[evictWay].tag = tag;
-            lines[evictWay].ctr = (1 << (config::CACHE_N_CTR_WIDTH - 1)) + (resolveDir ? 0 : -1);  // Set counter to weakly taken/not-taken based on resolveDir
-            lines[evictWay].u = 0;
-            T[i]->updateCacheLinesLRU(index[i], tag);
-            return;
-        }
+        //if (evictFound) {
+        //    lines[evictWay].valid = true;
+        //    lines[evictWay].tag = tag;
+        //    lines[evictWay].ctr = (1 << (config::CACHE_N_CTR_WIDTH - 1)) + (resolveDir ? 0 : -1);  // Set counter to weakly taken/not-taken based on resolveDir
+        //    lines[evictWay].u = 0;
+        //    T[i]->updateCacheLinesLRU(index[i], tag);
+        //    return;
+        //}
     }
 
     // Step 4: No eligible line → decay u in T[selectedT+1] to T3

@@ -11,6 +11,8 @@
 #include <cassert>
 #include <cstdint>
 #include <cstddef>
+#include <cstdio>
+#include <cstdarg>
 #include <iomanip>
 #include <string>
 #include <list>
@@ -19,7 +21,7 @@
 
 namespace config {
     // === Debug Parameters ===
-    constexpr std::size_t DEBUG = 1; // 0: no prints, 1: verbose debug prints  
+    constexpr std::size_t DEBUG = 0; // 0: no prints, 1: verbose debug prints  
     constexpr std::size_t PRINT_FORMAT_BINARY = 0;  // 1 = binary, 0 = decimal
     constexpr std::size_t GEN_INSTR_TRACE = 1; // 0: disable, 1: enable generation of instruction trace log
 
@@ -183,6 +185,16 @@ void printConfig() {
     printRow("Expected Budget", std::to_string(config::EXPECTED_HW_BUDGET_BITS) + " bits (" + std::to_string(config::EXPECTED_HW_BUDGET_BITS/(1024.0*8)) + " KB)", "");
 
     printDivider();
+}
+
+inline void dPrint(const char* fmt, ...)
+{
+    if (!config::DEBUG) return;
+
+    va_list args;
+    va_start(args, fmt);
+    std::vprintf(fmt, args);
+    va_end(args);
 }
 
 #include "bimodal.c"
