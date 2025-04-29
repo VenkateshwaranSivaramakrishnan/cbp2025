@@ -67,6 +67,17 @@ public:
     }
 
     /**
+     * Getter function to fetch Bimodal counter value for a given PC.
+     * 
+     * @param PC: The Program Counter value to index the prediction table
+     * @return: Bimodal counter value for the given PC
+     */
+     int getCtr(unsigned int PC) {
+        unsigned int index = getTableIndex(PC);
+        return bimodalTable[index];
+    }
+
+    /**
      * Display the current state of the prediction table.
      */
     void displayTable() const {

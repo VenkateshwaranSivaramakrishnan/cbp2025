@@ -54,7 +54,6 @@ class SampleCondPredictor
         SampleCondPredictor()
         : T0(config::BM_INDEX_WIDTH, config::BM_CTR_WIDTH)
         {
-            
             // Instantiate the Pattern History tables
             for (int i = 0; i < config::CACHE_N_TABLE_CNT; i++) {
                 T[i] = new PatternHistoryTable(config::CACHE_N_SET, config::CACHE_N_ASSOC);
@@ -67,6 +66,7 @@ class SampleCondPredictor
 
             // Generate branch trace log
             if (config::GEN_INSTR_TRACE) {
+                // Open trace_debug.txt separately for trace logging
                 trace_file.open("trace_debug.txt", std::ios::app);
             }
         }
@@ -134,6 +134,7 @@ class SampleCondPredictor
             // Alternate prediction selection
             if (selectedAlt == 0) {
                 altPred = results[0];
+                altPredCtr = T0.getCtr(PC);
             } else if (selectedAlt < config::CACHE_N_TABLE_CNT) {
                 altPredCtr = T[selectedAlt - 1]->accessCtrOnHit(index[selectedAlt - 1], tag);
                 altPred = (altPredCtr >= (1 << (config::CACHE_N_CTR_WIDTH - 1)));
@@ -242,6 +243,7 @@ class SampleCondPredictor
             // Alternate prediction selection
             if (selectedAlt == 0) {
                 altPred = results[0];
+                altPredCtr = T0.getCtr(PC);
             } else if (selectedAlt < config::CACHE_N_TABLE_CNT) {
                 altPredCtr = T[selectedAlt - 1]->accessCtrOnHit(index[selectedAlt - 1], tag);
                 altPred = (altPredCtr >= (1 << (config::CACHE_N_CTR_WIDTH - 1)));
@@ -288,22 +290,19 @@ class SampleCondPredictor
             uint8_t altIndex = 0;
             if (selectedT > 0) {
                 bool altPredConf = isStrong(altPredCtr, config::CACHE_N_CTR_WIDTH);
-                uint8_t altIndex = getUseAltIndex(selectedT, altPredConf);
+                altIndex = getUseAltIndex(selectedT, altPredConf);
                 if (predDir != altPred) {
                     ctrUpdate(useAltOnNa[altIndex], (altPred == resolveDir), config::ALT_PRED_CONF_T_WIDTH);
                 }
             }
             if (config::DEBUG) {
-                if(PC == 0x449cd4 && resolveDir != predDir & 0){
+                if (PC == 0x449cd4 && resolveDir != predDir & 0) {
                     dPrint(
-                        "PC=0x%08x, Hash=%lu, Pred=%d, Actual=%d, Index1=%d, Index2=%d, Index3=%d, Tag=%u, SelectedT=%d, SelectedAlt=%d, AltPred=%d, Target=%d, Count=%d, AltPredTable=%d\n",
+                        "PC=0x%08x, Hash=%lu, Pred=%d, Actual=%d, Tag=%u, SelectedT=%d, SelectedAlt=%d, AltPred=%d, Target=%ld, Count=%ld, AltPredTable=%d\n",
                         PC,
                         get_unique_inst_id(seq_no, piece),
                         predDir,
                         resolveDir,
-                        index[0],
-                        index[1],
-                        index[2],
                         tag,
                         selectedT,
                         selectedAlt,
@@ -311,11 +310,16 @@ class SampleCondPredictor
                         target,
                         branchCount,
                         static_cast<int>(useAltOnNa[altIndex])
-                    );                
-                    // T[0]->printCacheSet(index[0]);
-                    // T[1]->printCacheSet(index[1]);
-                    // T[2]->printCacheSet(index[2]);
-                }
+                    );
+                    dPrint("T[0] Bimodal = %d\n", T0.getCtr(PC));
+                    for (int i = 0; i < config::CACHE_N_TABLE_CNT; i++) {
+                        dPrint("T[%d] Set Index = %d\n", i, index[i]);
+                        T[i]->printCacheSet(index[i]);
+                    }
+                    for (int i = 0; i < config::ALT_PRED_CONF_T_SIZE; i++) {
+                        dPrint("USE_ALT_NA = %d\n", useAltOnNa[i]);
+                    }
+                }        
             }
         }
 };

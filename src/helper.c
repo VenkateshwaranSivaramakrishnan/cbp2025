@@ -68,7 +68,7 @@ void tryAllocate(int selectedT, unsigned int tag, bool prediction, bool resolveD
     }
 
     // Step 4: No eligible line → decay u in T[selectedT+1] to T3
-    for (int i = selectedT; i < 3; ++i) {
+    for (int i = selectedT; i < config::CACHE_N_TABLE_CNT; ++i) {
         auto& lines = T[i]->getSet(index[i]).lines;
         for (std::size_t j = 0; j < lines.size(); ++j) {
             if (lines[j].valid && lines[j].u > 0) {
