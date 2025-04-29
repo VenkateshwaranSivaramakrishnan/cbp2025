@@ -30,6 +30,40 @@ public:
     PatternHistoryRegister(unsigned int phrWidth) {
         PHR.resize(phrWidth);
     }
+
+    /**
+     * @brief Folds the even and odd bits of a PHR separately, then combines them.
+     *
+     * This function:
+     * 1. XORs all even-indexed bits together.
+     * 2. XORs all odd-indexed bits together.
+     * 3. Combines even and odd results with XOR.
+     * 4. Folds into a compressed bitset of size 'foldedLength'.
+     *
+     * @param phr Boost dynamic bitset representing path history register.
+     * @param historyLength Number of PHR bits to consider from LSB upwards.
+     * @param foldedLength Size of the final folded history.
+     * @return boost::dynamic_bitset<> Folded history.
+     */
+     boost::dynamic_bitset<> foldHistory(int historyLength, int foldedLength) const {
+        boost::dynamic_bitset<> even_bits(foldedLength);
+        boost::dynamic_bitset<> odd_bits(foldedLength);
+
+        for (int i = 0; i < historyLength; ++i) {
+            if (i % 2 == 0) {
+                even_bits[i % foldedLength] ^= PHR[i];
+            } else {
+                odd_bits[i % foldedLength] ^= PHR[i];
+            }
+        }
+        boost::dynamic_bitset<> folded = even_bits ^ odd_bits;
+        // Just in case, ensure folded is resized/masked to exactly foldedLength
+        if (folded.size() > foldedLength) {
+            folded.resize(foldedLength);
+        }
+        return folded;
+    }
+    
     /**
      * @brief Computes a 9-bit folded index from the Path History Register (PHR) and Program Counter (PC).
      *

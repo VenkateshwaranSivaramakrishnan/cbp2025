@@ -21,16 +21,17 @@
 
 namespace config {
     // === Debug Parameters ===
-    constexpr std::size_t DEBUG = 0; // 0: no prints, 1: verbose debug prints  
+    constexpr std::size_t DEBUG = 1; // 0: no prints, 1: verbose debug prints  
     constexpr std::size_t PRINT_FORMAT_BINARY = 0;  // 1 = binary, 0 = decimal
     constexpr std::size_t GEN_INSTR_TRACE = 1; // 0: disable, 1: enable generation of instruction trace log
 
     // === Base Parameters ===
     // Bimodal
-    constexpr std::size_t BM_INDEX_WIDTH = 15; // Number of Index bits
+    constexpr std::size_t BM_INDEX_WIDTH = 17; // Number of Index bits
     constexpr std::size_t BM_CTR_WIDTH = 3; // n-bit counter
-    // Cache
-    constexpr std::size_t CACHE_N_INDEX_WIDTH = 12; // Index field width of N-th Cache/Table
+    // TAGE Cache
+    constexpr std::size_t CACHE_N_TABLE_CNT = 8; // Number of Caches/Tables
+    constexpr std::size_t CACHE_N_INDEX_WIDTH = 11; // Index field width of N-th Cache/Table
     constexpr std::size_t CACHE_N_ASSOC = 4; // Associativity of N-th Cache/Table
     constexpr std::size_t CACHE_N_TAG_WIDTH = 11; // Tag field width in N-th Cache/Table
     constexpr std::size_t CACHE_N_CTR_WIDTH = 3; // Counter field width in N-th Cache/Table
@@ -38,22 +39,24 @@ namespace config {
     constexpr std::size_t CACHE_N_U_RST_CNT = 25000; // Branch count to reset the usefulness counters
     constexpr std::size_t CACHE_N_VALID_WIDTH = 1; // Valid field width in N-th Cache/Table
     // AltPred Confidence Table
-    constexpr std::size_t ALT_PRED_CONF_T_SIZE = 6; // Number of entries in the alternate prediction confidence table
+    constexpr std::size_t ALT_PRED_CONF_T_SIZE = 16; // Number of entries in the alternate prediction confidence table
     constexpr std::size_t ALT_PRED_CONF_T_WIDTH = 5; // Confidence counter width of the alternate prediction confidence table
     // Pattern History
     constexpr std::size_t PHR_WIDTH = 388; // Number of branch history bits stored by the PHR 
     // Budget
     constexpr std::size_t EXPECTED_HW_BUDGET_BITS = 192*1024*8; // Hardware budget in bits
 
-    // === Derived Parameters ===
-    constexpr std::size_t CACHE_N_LRU_BITS = (CACHE_N_ASSOC > 1) ? log2(CACHE_N_ASSOC) : 1; // Number of LRU bits
-    constexpr std::size_t CACHE_N_LRU_MAX = (1 << CACHE_N_LRU_BITS) - 1; // Maximum LRU count 
-    constexpr std::size_t CACHE_N_SET = 1 << CACHE_N_INDEX_WIDTH; // Number of Sets in N-th Cache/Table
-
     // === Derived Functions ===
     constexpr std::size_t log2(std::size_t n, std::size_t p = 0) { // Recursively find log2(x), for backward compatibility
         return (n <= 1) ? p : log2(n >> 1, p + 1);
     }
+
+    // === Derived Parameters ===
+    constexpr std::size_t CACHE_N_LRU_BITS = (CACHE_N_ASSOC > 1) ? log2(CACHE_N_ASSOC) : 1; // Number of LRU bits
+    constexpr std::size_t CACHE_N_LRU_MAX = (1 << CACHE_N_LRU_BITS) - 1; // Maximum LRU count 
+    constexpr std::size_t CACHE_N_SET = 1 << CACHE_N_INDEX_WIDTH; // Number of Sets in N-th Cache/Table
+    constexpr std::size_t TOTAL_TABLES = CACHE_N_TABLE_CNT + 1; // Total prediction tables = PHTs + Bimodal Table  
+    constexpr std::array<int, 8> TAGE_HISTORY_LENGTHS = {16, 32, 64, 128, 150 ,200, 256, 388};
 
 }
 
@@ -80,6 +83,7 @@ void printConfig() {
     std::cout << "\n-- Base Parameters --\n";
     print_entry("BM_INDEX_WIDTH", config::BM_INDEX_WIDTH);
     print_entry("BM_CTR_WIDTH", config::BM_CTR_WIDTH);
+    print_entry("CACHE_N_TABLE_CNT", config::CACHE_N_TABLE_CNT);
     print_entry("CACHE_N_INDEX_WIDTH", config::CACHE_N_INDEX_WIDTH);
     print_entry("CACHE_N_ASSOC", config::CACHE_N_ASSOC);
     print_entry("CACHE_N_TAG_WIDTH", config::CACHE_N_TAG_WIDTH);
@@ -88,6 +92,7 @@ void printConfig() {
     print_entry("CACHE_N_U_WIDTH", config::CACHE_N_U_WIDTH);
     print_entry("CACHE_N_U_RST_CNT", config::CACHE_N_U_RST_CNT);
     print_entry("CACHE_N_VALID_WIDTH", config::CACHE_N_VALID_WIDTH);
+    print_entry("TOTAL_TABLES", config::TOTAL_TABLES);
     
     // Derived Parameters
     std::cout << "\n-- Derived Parameters --\n";

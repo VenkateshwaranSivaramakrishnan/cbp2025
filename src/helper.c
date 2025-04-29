@@ -17,11 +17,10 @@
  */
 void tryAllocate(int selectedT, unsigned int tag, bool prediction, bool resolveDir,
                   PatternHistoryTable* T[], uint32_t index[]) {
-    if (selectedT >= 3) return;  // Nothing to allocate beyond T3
- 
-//   std::vector<int> candidates;
 
-    for (int i = selectedT; i < 3; ++i) {
+    if (selectedT >= config::CACHE_N_TABLE_CNT) return;  // Nothing to allocate beyond T3
+//   std::vector<int> candidates;
+    for (int i = selectedT; i < config::CACHE_N_TABLE_CNT; ++i) {
         auto& lines = T[i]->getSet(index[i]).lines;
         for (std::size_t j = 0; j < lines.size(); ++j) {
             if (!lines[j].valid) {  // If an invalid cache line is found, replace it
